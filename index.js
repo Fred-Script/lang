@@ -1,14 +1,8 @@
 /*
 Possible Parameters: --safe --log
-
-#test = abc #document.getElementById("test").innerHTML="abc"
-
-Arr:x [] //  the empty list
-Arr[Int]:x [3,4,5] //  a three element list
-Arr[Int]:y [0,1,2,x] //  the list consisting of 0, 1 and 2 on top the list x => [0,1,2,3,4,5]
-Arr[String]:z [a,b,c,d]
-Arr[String]:zz [z,a,b,c,d] // z is string and not reference to array z
-Arr[String]:zzz [Array:z,a,b,c,d] // Giving the type works => [a,b,c,d,a,b,c,d]
+Compile with:
+	node index.js file.fred > compiled.js
+	node index.js file.fred --safe
 */
 
 //Import the file system handler library
@@ -93,9 +87,13 @@ function current_scope_index() {
  */
 var CURRENT_LINE = 0;
 
+console.log("/*");
 console.log("---------------------------------------");
-console.log("-      FREDScript compiler v1.0.0     -");
+console.log("|     Fred-Script compiler v0.0.1     |");
 console.log("---------------------------------------");
+console.log("");
+console.log("Compiling file " + yargs._[0]);
+console.log("*/");
 console.log("");
 
 function parse_(code) {
@@ -280,25 +278,9 @@ function parse_method_call(code) {
 totalcode = "";
 //Important: Newline at the end
 var c = `
-func alert String:t #(
-)
-func prompt String:t String:pre #(
-)
+import code/js.fred
 
-func al String:text (
-	alert text
-	prompt text ente
-)
-
-al Ente
-
-for i in 0..5 (
-	for j in 0..5 (
-		if i==j (
-			int:k 0
-		)
-	)
-)
+import ${yargs._[0]}
 `;
 c = split_(c);
 c = parse_(c);

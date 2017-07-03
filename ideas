@@ -32,3 +32,13 @@ Gauge
 Bootstrap
 
 Form input fixed @
+
+
+#test = abc #document.getElementById("test").innerHTML="abc"
+
+Arr:x [] //  the empty list
+Arr[Int]:x [3,4,5] //  a three element list
+Arr[Int]:y [0,1,2,x] //  the list consisting of 0, 1 and 2 on top the list x => [0,1,2,3,4,5]
+Arr[String]:z [a,b,c,d]
+Arr[String]:zz [z,a,b,c,d] // z is string and not reference to array z
+Arr[String]:zzz [Array:z,a,b,c,d] // Giving the type works => [a,b,c,d,a,b,c,d]

@@ -1,0 +1,4 @@
+func alert String:t #(
+)
+func prompt String:t String:pre #(
+)
