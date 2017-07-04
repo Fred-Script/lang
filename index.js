@@ -8,7 +8,17 @@ Compile with:
 //Import the file system handler library
 const fs = require('fs');
 //Get access to command line options
-const yargs = require('yargs').argv;
+const yargs = require('yargs')
+	.usage('Usage: $0 [options]')
+	.example('$0 file.fred --log', 'compile and log')
+	.example('$0 file.fred > compiled.js', 'compile into js file')
+	.example('$0 file.fred', 'compile and display result')
+	.help('h')
+	.alias('h', 'help')
+	.alias('l', 'log')
+	.describe('l', 'Create a detailed log file')
+	.epilog('GPL Licence\nCopyright Fred 2017')
+	.argv;
 
 function split_(code) {
 	return code.split("\n");
@@ -19,18 +29,17 @@ function is_type(what) {
 }
 
 function is_deep(what) {
-	return ~"forin.while.cond.func.".search(what + ".");
+	return ~"forin.forto.while.cond.func.".search(what + ".");
 }
 
 function requires_quotation(type) {
 	return ~"string.regex.date.".search(type.toLowerCase());
 }
 
-// Error handling
-function e(name, i, line) {
-	console.log(["Error", "Warning", "Notice", "Log"][i] + ": " + name + " in line " + (line ? line : (CURRENT_LINE + 1)));
-	if (i == 0)
-		process.exit(1);
+var error = require("./error");
+
+function e(a, b, c) {
+	error.e(a, b, c)
 }
 
 /*
@@ -92,21 +101,16 @@ console.log("---------------------------------------");
 console.log("|     Fred-Script compiler v0.0.1     |");
 console.log("---------------------------------------");
 console.log("");
-console.log("Compiling file " + yargs._[0]);
+console.log("Compiling file " + yargs._[0] + " to JavaScript.");
 console.log("*/");
 console.log("");
 
 function parse_(code) {
-	var i, tabs, l, j;
+	var i, l, j;
 	for (i = 0; i < code.length - 1; ++i) {
 		CURRENT_LINE = i;
-		tabs = (code[i].split("\t").length - 1) - (code[i + 1].split("\t").length - 1);
 		code[i] = code[i].replace(/^\t+/, "");
 		code[i] = parse_line(code[i]);
-		for (j = 0; j < tabs; ++j) {
-			//code[i] += "}";
-			//scopepath.pop();
-		}
 	}
 	totalcode += code.join("\n");
 	return code;
@@ -159,16 +163,16 @@ function parse_if(code) {
 
 function parse_for(code) {
 	//For-Loop
-	//@TODO for i=0 to 5
 	if (l[l.length - 1] != "(")
 		e("Syntax Error: Missing Token '(' at end of for-loop.", 1);
 	if (l.length < 5)
 		e("Syntax error: not enough arguments for for..in or for..to loop; found: " + (l.length - 1) + ", required: 4", 0);
-	if (l[3].split("..").length < 2)
-		e("Syntax Error: Range operator not found or incorrectly used", 0)
 
 	if (l[2] == "in") {
 		//For i in
+		if (l[3].split("..").length < 2)
+			e("Syntax Error: Range operator not found or incorrectly used", 0)
+
 		add({
 			type: "newvar",
 			name: l[1],
@@ -178,6 +182,20 @@ function parse_for(code) {
 			type: "forin",
 			var: l[1],
 			in: l[3]
+		});
+	} else if (l[4] == "to") {
+		//for i = 0 to 5
+		add({
+			type: "newvar",
+			name: l[1],
+			stype: "int",
+			value: l[3]
+		});
+		add({
+			type: "forto",
+			var: l[1],
+			from: l[3],
+			to: l[5]
 		});
 	} else {
 		e("Syntax Error: second argument of for may be in or to. Found: " + l[2], 0);
@@ -275,15 +293,12 @@ function parse_method_call(code) {
  * Testing and calling
  */
 
-totalcode = "";
-//Important: Newline at the end
-var c = `
+var totalcode = "",
+	c = parse_(split_(`
 import code/js.fred
 
 import ${yargs._[0]}
-`;
-c = split_(c);
-c = parse_(c);
+`));
 
 //console.log(c.join("\n"));
 //console.log(totalcode);
@@ -317,6 +332,7 @@ function rec(sc, i) {
 			convert_forin(sc);
 			break;
 		case "while":
+			convert_while(sc);
 			break;
 		case "methodcall":
 			convert_method_call(sc);
@@ -325,6 +341,9 @@ function rec(sc, i) {
 			convert_cond(sc);
 			break;
 		case "psnewvar":
+			break;
+		case "forto":
+			convert_forto(sc);
 			break;
 		default:
 			e("Internal error", 0);
@@ -358,12 +377,12 @@ function reg_scopeat(path) {
 
 function reg_vartype(path_, varname) {
 	var path = JSON.parse(JSON.stringify(path_)),
-		sc;
+		sc, i, j;
 
-	for (var i = path.length; i > 0; --i) {
+	for (i = path.length; i > 0; --i) {
 		sc = reg_scopeat(path);
 
-		for (var j = 0; j < sc.length; ++j) {
+		for (j = 0; j < sc.length; ++j) {
 			if (sc[j].type == "newvar" || sc[j].type == "psnewvar") {
 				if (sc[j].name == varname)
 					return sc[j];
@@ -382,12 +401,12 @@ function reg_vartype(path_, varname) {
 
 function reg_funcsig(path_, varname) {
 	var path = JSON.parse(JSON.stringify(path_)),
-		sc;
+		sc, i, j;
 
-	for (var i = path.length; i > 0; --i) {
+	for (i = path.length; i > 0; --i) {
 		sc = reg_scopeat(path);
 
-		for (var j = 0; j < sc.length; ++j) {
+		for (j = 0; j < sc.length; ++j) {
 			if (sc[j].type == "func") {
 				if (sc[j].name == varname)
 					return sc[j];
@@ -427,8 +446,20 @@ function convert_forin(sc) {
 	code += "}";
 }
 
+function convert_while(sc) {
+	code += "while(" + sc.condition + "){"
+	reg_sub(sc);
+	code += "}";
+}
+
 function convert_newvar(sc) {
 	code += "var " + sc.name + (sc.value ? "=" + sc.value + ";" : ";");
+}
+
+function convert_forto(sc) {
+	code += "for(" + sc.var+"=" + sc.from + ";" + sc.var+"<" + sc.to + ";++" + sc.var+"){";
+	reg_sub(sc);
+	code += "}";
 }
 
 function convert_method_call(sc) {

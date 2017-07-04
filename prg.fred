@@ -3,12 +3,16 @@ func al String:text (
 	prompt text ente
 )
 
-al Ente
+@al Ente
 
-for i in 0..5 (
-	for j in 0..5 (
-		if i==j (
-			int:k 0
-		)
-	)
+@for i in 0..5 (
+@	for j in 0..5 (
+@		if i==j (
+@			int:k 0
+@		)
+@	)
+@)
+
+for i = 0 to 5 (
+	al Ente
 )
